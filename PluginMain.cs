@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Drawing;
+using TerrariaApi.Server;
 using Terraria;
-using Hooks;
+using TShockAPI.Hooks;
 using MySql.Data.MySqlClient;
 using TShockAPI;
 using TShockAPI.DB;
@@ -11,7 +12,7 @@ using System.ComponentModel;
 
 namespace MessagePlugin
 {
-    [APIVersion(1, 11)]
+    [ApiVersion(1, 16)]
     public class MessagePlugin : TerrariaPlugin
     {
         public static List<MPlayer> Players = new List<MPlayer>();
@@ -19,12 +20,12 @@ namespace MessagePlugin
    
         public override string Name
         {
-            get { return "Message plugin"; }
+            get { return "MessagePlugin2"; }
         }
 
         public override string Author
         {
-            get { return "Created by Lmanik."; }
+            get { return "Created by Lmanik - Renovated by Colin."; }
         }
 
         public override string Description
@@ -34,27 +35,23 @@ namespace MessagePlugin
 
         public override Version Version
         {
-            get { return new Version(0, 9, 2); }
+            get { return new Version(1, 0); }
         }
 
         public override void Initialize()
         {
-            GameHooks.Update += OnUpdate;
-            GameHooks.Initialize += OnInitialize;
-            NetHooks.GreetPlayer += OnGreetPlayer;
-            ServerHooks.Leave += OnLeave;
-            ServerHooks.Chat += OnChat;
+			ServerApi.Hooks.GameInitialize.Register (this, OnInitialize);
+			ServerApi.Hooks.NetGreetPlayer.Register (this, OnGreetPlayer);
+			ServerApi.Hooks.ServerLeave.Register (this, OnLeave);
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                GameHooks.Update -= OnUpdate;
-                GameHooks.Initialize -= OnInitialize;
-                NetHooks.GreetPlayer -= OnGreetPlayer;
-                ServerHooks.Leave -= OnLeave;
-                ServerHooks.Chat -= OnChat;
+				ServerApi.Hooks.GameInitialize.Deregister (this, OnInitialize);
+				ServerApi.Hooks.NetGreetPlayer.Deregister (this, OnGreetPlayer);
+				ServerApi.Hooks.ServerLeave.Deregister (this, OnLeave);
             }
             base.Dispose(disposing);
         }
@@ -64,7 +61,7 @@ namespace MessagePlugin
         {
         }
 
-        public void OnInitialize()
+        public void OnInitialize(EventArgs e)
         {
             //set tshock db
             TDb.InitTshockDB();
@@ -79,48 +76,43 @@ namespace MessagePlugin
             {
                 if (group.Name != "superadmin")
                 {
-                    if (group.HasPermission("msguse"))
+                    if (group.HasPermission("msg.use"))
                         msg = true;
                 }
             }
 
             List<string> permlist = new List<string>();
             if (!msg)
-                permlist.Add("msguse");
+                permlist.Add("msg.use");
 
             TShock.Groups.AddPermissions("trustedadmin", permlist);
 
-            Commands.ChatCommands.Add(new Command("msguse", Msg, "msg"));
+            Commands.ChatCommands.Add(new Command("msg.use", Msg, "msg"));
         }
-
-
-        public void OnUpdate()
+            
+        public void OnGreetPlayer(GreetPlayerEventArgs e)
         {
-        }
-
-        public void OnGreetPlayer(int who, HandledEventArgs e)
-        {
-            MPlayer player = new MPlayer(who);
+            MPlayer player = new MPlayer(e.Who);
 
             lock (MessagePlugin.Players)
                 MessagePlugin.Players.Add(player);
 
-            if (TShock.Players[who].Group.HasPermission("msguse"))
+            if (TShock.Players[e.Who].Group.HasPermission("msg.use"))
             {
-                string name = TShock.Players[who].Name;
+                string name = TShock.Players[e.Who].Name;
                 int count = GetUnreadEmailsByName(name);
-                TShock.Players[who].SendMessage("You have got " + count + " unread messages.", Color.Yellow);
+                TShock.Players[e.Who].SendInfoMessage("You have " + count + " unread messages.");
             }   
         }
 
         // Remove all players
-        public void OnLeave(int ply)
+        public void OnLeave(LeaveEventArgs e)
         {
             lock (Players)
             {
                 for (int i = 0; i < Players.Count; i++)
                 {
-                    if (Players[i].Index == ply)
+                    if (Players[i].Index == e.Who)
                     {
                         Players.RemoveAt(i);
                         break;
@@ -128,11 +120,7 @@ namespace MessagePlugin
                 }
             }
         }
-
-        public void OnChat(messageBuffer msg, int ply, string text, HandledEventArgs e)
-        {
-        }
-
+            
         // Return unread emails
         public static int GetUnreadEmailsByName(string name)
         {
@@ -165,8 +153,8 @@ namespace MessagePlugin
 
             if (TShock.Utils.FindPlayer(to).Count > 0)
             {
-                if(MPlayer.GetPlayerByName(to).TSPlayer.Group.HasPermission("msguse"))
-                    MPlayer.GetPlayerByName(to).TSPlayer.SendMessage("You have got new message from " + from, Color.Aqua);
+                if(MPlayer.GetPlayerByName(to).TSPlayer.Group.HasPermission("msg.use"))
+                    MPlayer.GetPlayerByName(to).TSPlayer.SendInfoMessage("You have a new message from " + from);
             }
             else
             {
@@ -178,11 +166,11 @@ namespace MessagePlugin
         //help message
         public static void Help(CommandArgs args)
         {
-            args.Player.SendMessage("To send message use /msg <playerName> <message>", Color.Aqua);
-            args.Player.SendMessage("lists unread messages by /msg inbox <page number>", Color.Aqua);
-            args.Player.SendMessage("lists messages by /msg list <page number>", Color.Aqua);
-            args.Player.SendMessage("to read specify message /msg read <id>, id give from list", Color.Aqua);
-            args.Player.SendMessage("for delete message use /msg del <id>", Color.Aqua);
+            args.Player.SendMessage("To send a message use: /msg <player> <message>", Color.Aqua);
+            args.Player.SendMessage("To list unread messages use: /msg inbox <page number>", Color.Aqua);
+            args.Player.SendMessage("To list all messages use: /msg list <page number>", Color.Aqua);
+            args.Player.SendMessage("To read a specific message use: /msg read <id>", Color.Aqua);
+            args.Player.SendMessage("To delete a message use: /msg del <id>", Color.Aqua);
         }
 
         // Run Message command
@@ -242,7 +230,7 @@ namespace MessagePlugin
                         {
                             if (!int.TryParse(args.Parameters[1], out page) || page < 1)
                             {
-                                args.Player.SendMessage(string.Format("Invalid page number ({0})", page), Color.Red);
+                                args.Player.SendErrorMessage(string.Format("Invalid page number ({0})", page));
                                 return;
                             }
                             page--; //Substract 1 as pages are parsed starting at 1 and not 0
@@ -256,7 +244,7 @@ namespace MessagePlugin
 
                         if (messages.Count == 0)
                         {
-                            args.Player.SendMessage("You haven't got unread messages.", Color.Red);
+                            args.Player.SendErrorMessage("You don't have any messages.");
                             return;
                         }
 
@@ -264,12 +252,12 @@ namespace MessagePlugin
                         int pagecount = messages.Count / pagelimit;
                         if (page > pagecount)
                         {
-                            args.Player.SendMessage(string.Format("Page number exceeds pages ({0}/{1})", page + 1, pagecount + 1), Color.Red);
+                            args.Player.SendErrorMessage(string.Format("Page number exceeds pages ({0}/{1})", page + 1, pagecount + 1));
                             return;
                         }
 
                         //Display the current page and the number of pages.
-                        args.Player.SendMessage(string.Format("Inbox ({0}/{1}):", page + 1, pagecount + 1), Color.Green);
+                        args.Player.SendSuccessMessage(string.Format("Inbox ({0}/{1}):", page + 1, pagecount + 1));
 
                         //Add up to pagelimit names to a list
                         var messageslist = new List<string>();
@@ -282,12 +270,12 @@ namespace MessagePlugin
                         var lines = messageslist.ToArray();
                         for (int i = 0; i < lines.Length; i += perline)
                         {
-                            args.Player.SendMessage(string.Join(", ", lines, i, Math.Min(lines.Length - i, perline)), Color.Yellow);
+                            args.Player.SendInfoMessage(string.Join(", ", lines, i, Math.Min(lines.Length - i, perline)));
                         }
 
                         if (page < pagecount)
                         {
-                            args.Player.SendMessage(string.Format("Type /msg inbox {0} for more unread messages.", (page + 2)), Color.Yellow);
+                            args.Player.SendInfoMessage(string.Format("Type /msg inbox {0} for more unread messages.", (page + 2)));
                         }
 
                         //remove all messages
@@ -332,7 +320,7 @@ namespace MessagePlugin
                         {
                             if (!int.TryParse(args.Parameters[1], out page) || page < 1)
                             {
-                                args.Player.SendMessage(string.Format("Invalid page number ({0})", page), Color.Red);
+                                args.Player.SendErrorMessage(string.Format("Invalid page number ({0})", page));
                                 return;
                             }
                             page--; //Substract 1 as pages are parsed starting at 1 and not 0
@@ -346,7 +334,7 @@ namespace MessagePlugin
 
                         if (messages.Count == 0)
                         {
-                            args.Player.SendMessage("You haven't got messages.", Color.Red);
+                            args.Player.SendErrorMessage("You don't have any messages.");
                             return;
                         }
 
@@ -354,12 +342,12 @@ namespace MessagePlugin
                         int pagecount = messages.Count / pagelimit;
                         if (page > pagecount)
                         {
-                            args.Player.SendMessage(string.Format("Page number exceeds pages ({0}/{1})", page + 1, pagecount + 1), Color.Red);
+                            args.Player.SendErrorMessage(string.Format("Page number exceeds pages ({0}/{1})", page + 1, pagecount + 1));
                             return;
                         }
 
                         //Display the current page and the number of pages.
-                        args.Player.SendMessage(string.Format("List messages ({0}/{1}):", page + 1, pagecount + 1), Color.Green);
+                        args.Player.SendSuccessMessage(string.Format("List messages ({0}/{1}):", page + 1, pagecount + 1));
 
                         //Add up to pagelimit names to a list
                         var messageslist = new List<string>();
@@ -372,12 +360,12 @@ namespace MessagePlugin
                         var lines = messageslist.ToArray();
                         for (int i = 0; i < lines.Length; i += perline)
                         {
-                            args.Player.SendMessage(string.Join(", ", lines, i, Math.Min(lines.Length - i, perline)), Color.Yellow);
+                            args.Player.SendInfoMessage(string.Join(", ", lines, i, Math.Min(lines.Length - i, perline)));
                         }
 
                         if (page < pagecount)
                         {
-                            args.Player.SendMessage(string.Format("Type /msg list {0} for more messages.", (page + 2)), Color.Yellow);
+                            args.Player.SendInfoMessage(string.Format("Type /msg list {0} for more messages.", (page + 2)));
                         }
 
                         //remove all messages
@@ -416,12 +404,12 @@ namespace MessagePlugin
                             }
                             else
                             {
-                                args.Player.SendMessage("Messages with this id \"" + args.Parameters[1].ToString() + "\" is not exist.", Color.Red);
+                                args.Player.SendErrorMessage("Message with the ID \"" + args.Parameters[1].ToString() + "\" does not exist.");
                             }
                         }
                         else
                         {
-                            args.Player.SendMessage("You must set Email ID", Color.Red);
+                            args.Player.SendErrorMessage("You must specify an ID.");
                         }
 
                         break;
@@ -449,11 +437,11 @@ namespace MessagePlugin
                                                 MDb.SQLWriter.DeleteRow("MessagePlugin", where);
                                             }
 
-                                            args.Player.SendMessage("All messages were deleted.", Color.Red);
+                                            args.Player.SendErrorMessage("All messages were deleted.");
                                         }
                                         else
                                         {
-                                            args.Player.SendMessage("You haven't god any messages.", Color.Red);
+                                            args.Player.SendErrorMessage("You don't have any messages.");
                                         }
                                         
 
@@ -474,11 +462,11 @@ namespace MessagePlugin
                                                 MDb.SQLWriter.DeleteRow("MessagePlugin", where);
                                             }
 
-                                            args.Player.SendMessage("All read messages were deleted", Color.Red);
+                                            args.Player.SendErrorMessage("All read messages were deleted.");
                                         }
                                         else
                                         {
-                                            args.Player.SendMessage("You haven't got any read messages.", Color.Red);
+                                            args.Player.SendErrorMessage("You don't have any read messages.");
                                         }
 
                                         break;
@@ -499,11 +487,11 @@ namespace MessagePlugin
                                                 MDb.SQLWriter.DeleteRow("MessagePlugin", where);
                                             }
 
-                                            args.Player.SendMessage("All unread messages were deleted.", Color.Red);
+                                            args.Player.SendErrorMessage("All unread messages were deleted.");
                                         }
                                         else
                                         {
-                                            args.Player.SendMessage("You haven't god any unread messages.", Color.Red);
+                                            args.Player.SendErrorMessage("You don't have any unread messages.");
                                         }
 
                                         break;
@@ -519,11 +507,11 @@ namespace MessagePlugin
                                         if (count > 0)
                                         {
                                             MDb.SQLWriter.DeleteRow("MessagePlugin", where);
-                                            args.Player.SendMessage("Message with id \"" + args.Parameters[1].ToString() + "\" was deleted.", Color.Red);
+                                            args.Player.SendErrorMessage("Message with ID \"" + args.Parameters[1].ToString() + "\" was deleted.");
                                         }
                                         else
                                         {
-                                            args.Player.SendMessage("Message with id \"" + args.Parameters[1].ToString() + "\" is not exist.", Color.Red);
+                                            args.Player.SendErrorMessage("Message with ID \"" + args.Parameters[1].ToString() + "\" does not exist.");
                                         }
 
                                         break;
@@ -532,7 +520,7 @@ namespace MessagePlugin
                         }
                         else
                         {
-                            args.Player.SendMessage("You must set second parameter [id, all, unread, read]", Color.Red);
+                            args.Player.SendErrorMessage("You must set second parameter [id, all, unread, read]");
                         }
                         break;
                     }
@@ -550,11 +538,11 @@ namespace MessagePlugin
                                 string mailTo = args.Parameters[0].ToString();
                                 SendMessage(mailTo, MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name, args.Parameters[1]);
 
-                                args.Player.SendMessage("You send message to " + mailTo, Color.Green);
+                                args.Player.SendSuccessMessage("You sent a message to " + mailTo);
                             }
                             else
                             {
-                                args.Player.SendMessage("Player " + args.Parameters[0] + " is not exist.", Color.Red);
+                                args.Player.SendErrorMessage("Player " + args.Parameters[0] + " could not be found.");
                             }
 
                         }

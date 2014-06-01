@@ -1,0 +1,15 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="MDb.cs">
+    <Files>
+      <File FileName="PluginMain.cs" Line="12" Column="20" />
+      <File FileName="Message.cs" Line="1" Column="1" />
+      <File FileName="MDb.cs" Line="1" Column="1" />
+      <File FileName="TDb.cs" Line="1" Column="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

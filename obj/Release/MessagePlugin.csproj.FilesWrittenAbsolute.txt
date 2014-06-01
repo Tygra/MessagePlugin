@@ -1,0 +1,9 @@
+/Users/colin/MessagePlugin/obj/Release/.NETFramework,Version=v4.0.AssemblyAttribute.cs
+/Users/colin/MessagePlugin/bin/MessagePlugin.dll
+/Users/colin/MessagePlugin/obj/Release/MessagePlugin.dll
+/Users/colin/MessagePlugin/bin/Mono.Data.Sqlite.dll
+/Users/colin/MessagePlugin/bin/TerrariaServer.exe
+/Users/colin/MessagePlugin/bin/TShockAPI.dll
+/Users/colin/MessagePlugin/bin/Newtonsoft.Json.dll
+/Users/colin/MessagePlugin/bin/MySql.Data.dll
+/Users/colin/MessagePlugin/bin/HttpServer.dll

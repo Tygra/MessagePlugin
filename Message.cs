@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Drawing;
-using Terraria;
-using Hooks;
+using TerrariaApi;
 using MySql.Data.MySqlClient;
 using TShockAPI;
+using TShockAPI.Hooks;
 using TShockAPI.DB;
 using System.ComponentModel;
 

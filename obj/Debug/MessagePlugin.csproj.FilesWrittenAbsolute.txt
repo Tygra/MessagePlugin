@@ -1,0 +1,3 @@
+/Users/colin/MessagePlugin/obj/Debug/.NETFramework,Version=v4.0.AssemblyAttribute.cs
+/Users/colin/Bin/Debug/PluginTemplate/MessagePlugin.dll
+/Users/colin/MessagePlugin/obj/Debug/MessagePlugin.dll
