@@ -57,11 +57,8 @@ namespace MessagePlugin
 
             if (name != null)
             {
-                List<SqlValue> where = new List<SqlValue>();
-                where.Add(new SqlValue("Username", "'" + name + "'"));
-                ply = TDb.SQLEditor.ReadColumn("Users", "Username", where).Count;
-
-                return ply;
+				if (TShock.Users.GetUserByName (name) != null)
+					return 1;
             }
 
             return ply;
