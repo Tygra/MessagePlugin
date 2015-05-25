@@ -18,16 +18,16 @@ namespace MessagePlugin
         public string MailTo { get; set; }
         public string MailText { get; set; }
         public string Date { get; set; }
-        public bool Read { get; set; }
+        public bool Seen { get; set; }
 
-        public Message(int id, string mailFrom, string mailTo, string mailText, string date, bool read)
+        public Message(int id, string mailFrom, string mailTo, string mailText, string date, bool seen)
         {
             ID = id;
             MailFrom = mailFrom;   
             MailTo = mailTo;
             MailText = mailText;
             Date = date;
-            Read = read;
+            Seen = seen;
         }
     }
 }
