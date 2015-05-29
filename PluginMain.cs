@@ -35,6 +35,7 @@ namespace MessagePlugin {
     public override void Initialize() {
       ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
       ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
+      PlayerHooks.PlayerPostLogin += OnPostLogin;
       ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
     }
 
@@ -42,6 +43,7 @@ namespace MessagePlugin {
       if (disposing) {
         ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
         ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnGreetPlayer);
+        PlayerHooks.PlayerPostLogin -= OnPostLogin;
         ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
       }
       base.Dispose(disposing);
@@ -84,6 +86,19 @@ namespace MessagePlugin {
         string name = TShock.Players[e.Who].Name;
         int count = GetUnreadEmailsByName(name);
         TShock.Players[e.Who].SendInfoMessage("You have " + count + " unread messages.");
+      }
+    }
+
+    public void OnPostLogin(PlayerPostLoginEventArgs e) {
+      MPlayer player = new MPlayer(e.Player.User.ID);
+
+      lock (MessagePlugin.Players)
+        MessagePlugin.Players.Add(player);
+
+      if (TShock.Players[e.Player.Index].Group.HasPermission("msg.use")) {
+        string name = TShock.Players[e.Player.Index].Name;
+        int count = GetUnreadEmailsByName(name);
+        TShock.Players[e.Player.Index].SendMessage("You have " + count + " unread messages.", Color.Fuchsia);
       }
     }
 
