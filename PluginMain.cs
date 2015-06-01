@@ -13,7 +13,6 @@ using System.ComponentModel;
 namespace MessagePlugin {
   [ApiVersion(1, 17)]
   public class MessagePlugin : TerrariaPlugin {
-    public static List<MPlayer> Players = new List<MPlayer>();
     public static List<Message> Messages = new List<Message>();
 
     public override string Name {
@@ -36,7 +35,6 @@ namespace MessagePlugin {
       ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
       ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
       PlayerHooks.PlayerPostLogin += OnPostLogin;
-      ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
     }
 
     protected override void Dispose(bool disposing) {
@@ -44,7 +42,6 @@ namespace MessagePlugin {
         ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
         ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnGreetPlayer);
         PlayerHooks.PlayerPostLogin -= OnPostLogin;
-        ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
       }
       base.Dispose(disposing);
     }
@@ -61,10 +58,8 @@ namespace MessagePlugin {
       bool msg = false;
 
       foreach (Group group in TShock.Groups.groups) {
-        if (group.Name != "superadmin") {
-          if (group.HasPermission("msg.use"))
-            msg = true;
-        }
+        if (group.HasPermission("msg.use"))
+          msg = true;
       }
 
       List<string> permlist = new List<string>();
@@ -77,11 +72,6 @@ namespace MessagePlugin {
     }
 
     public void OnGreetPlayer(GreetPlayerEventArgs e) {
-      MPlayer player = new MPlayer(e.Who);
-
-      lock (MessagePlugin.Players)
-        MessagePlugin.Players.Add(player);
-
       if (TShock.Players[e.Who].Group.HasPermission("msg.use")) {
         string name = TShock.Players[e.Who].Name;
         int count = GetUnreadEmailsByName(name);
@@ -90,27 +80,10 @@ namespace MessagePlugin {
     }
 
     public void OnPostLogin(PlayerPostLoginEventArgs e) {
-      MPlayer player = new MPlayer(e.Player.User.ID);
-
-      lock (MessagePlugin.Players)
-        MessagePlugin.Players.Add(player);
-
       if (TShock.Players[e.Player.Index].Group.HasPermission("msg.use")) {
         string name = TShock.Players[e.Player.Index].Name;
         int count = GetUnreadEmailsByName(name);
         TShock.Players[e.Player.Index].SendMessage("You have " + count + " unread messages.", Color.Fuchsia);
-      }
-    }
-
-    // Remove all players
-    public void OnLeave(LeaveEventArgs e) {
-      lock (Players) {
-        for (int i = 0; i < Players.Count; i++) {
-          if (Players[i].Index == e.Who) {
-            Players.RemoveAt(i);
-            break;
-          }
-        }
       }
     }
 
@@ -127,9 +100,10 @@ namespace MessagePlugin {
     // Save message to db
     public static void SendMessage(string to, string from, string text) {
       MDb.AddMessage(from, to, text);
-      if (TShock.Utils.FindPlayer(to).Count > 0) {
-        if (MPlayer.GetPlayerByName(to).TSPlayer.Group.HasPermission("msg.use"))
-          MPlayer.GetPlayerByName(to).TSPlayer.SendInfoMessage("You have a new message from " + from);
+      List<TSPlayer> players = TShock.Utils.FindPlayer(to);
+      if (players.Count == 1) {
+        if (players[0].Group.HasPermission("msg.use"))
+          players[0].SendInfoMessage("You have a new message from " + from);
       }
     }
 
@@ -161,7 +135,7 @@ namespace MessagePlugin {
         //list of all unread messages
         case "inbox": {
             // Fetch all unread messages
-            List<Message> messages = MDb.GetMessagesType(MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name, false);
+            List<Message> messages = MDb.GetMessagesType(args.Player.Name, false);
             //How many messages per page
             const int pagelimit = 5;
             //How many messages per line
@@ -218,7 +192,7 @@ namespace MessagePlugin {
         //list of all messages
         case "list": {
             // Fetch all messages
-            List<Message> messages = MDb.GetMessages(MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name);
+            List<Message> messages = MDb.GetMessages(args.Player.Name);
 
             //How many messages per page
             const int pagelimit = 5;
@@ -278,7 +252,7 @@ namespace MessagePlugin {
         case "read": {
             if (args.Parameters.Count > 1) {
               int id = int.Parse(args.Parameters[1]);
-              Message msg = MDb.GetMessage(id, MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name);
+              Message msg = MDb.GetMessage(id, args.Player.Name);
               if (msg != null) {
 
                 args.Player.SendMessage(msg.ID + ": On " + msg.Date + ", " + msg.MailFrom + " wrote:", Color.Aqua);
@@ -304,7 +278,7 @@ namespace MessagePlugin {
               //switch args [id, unread, read, all]
               switch (args.Parameters[1].ToString()) {
                 case "all": {
-                    if (MDb.DelAllMessages(MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name)) {
+                    if (MDb.DelAllMessages(args.Player.Name)) {
                       args.Player.SendErrorMessage("All messages were deleted.");
                     }
                     else {
@@ -315,7 +289,7 @@ namespace MessagePlugin {
                     break;
                   }
                 case "read": {
-                    if (MDb.DelMessagesType(MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name, true)) {
+                    if (MDb.DelMessagesType(args.Player.Name, true)) {
                       args.Player.SendErrorMessage("All read messages were deleted.");
                     }
                     else {
@@ -326,7 +300,7 @@ namespace MessagePlugin {
                   }
 
                 case "unread": {
-                    if (MDb.DelMessagesType(MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name, false)) {
+                    if (MDb.DelMessagesType(args.Player.Name, false)) {
                       args.Player.SendErrorMessage("All unread messages were deleted.");
                     }
                     else {
@@ -338,13 +312,13 @@ namespace MessagePlugin {
 
                 default: {
                     int id = int.Parse(args.Parameters[1]);
-                    if (MDb.DelMessage(id, MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name)) {
+                    if (MDb.DelMessage(id, args.Player.Name)) {
                       args.Player.SendErrorMessage("Message with ID \"" + args.Parameters[1].ToString() + "\" was deleted.");
                     }
                     else {
                       args.Player.SendErrorMessage("Message with ID \"" + args.Parameters[1].ToString() + "\" does not exist.");
                     }
-                  
+
                     break;
                   }
               }
@@ -357,20 +331,17 @@ namespace MessagePlugin {
 
         //send message
         default: {
-
             if (args.Parameters.Count > 1) {
-              int player = MPlayer.GetPlayerInDb(args.Parameters[0]);
+              User userPlr = TShock.Users.GetUserByName(args.Parameters[0]);
 
-              if (player > 0) {
+              if (userPlr == null) {
+                args.Player.SendErrorMessage("Player " + args.Parameters[0] + " could not be found.");
+              } else {
                 string mailTo = args.Parameters[0];
-                SendMessage(mailTo, MPlayer.GetPlayerById(args.Player.Index).TSPlayer.Name, String.Join(" ", args.Parameters.GetRange(1, args.Parameters.Count - 1)));
+                SendMessage(mailTo, args.Player.Name, String.Join(" ", args.Parameters.GetRange(1, args.Parameters.Count - 1)));
 
                 args.Player.SendSuccessMessage("You sent a message to " + mailTo);
               }
-              else {
-                args.Player.SendErrorMessage("Player " + args.Parameters[0] + " could not be found.");
-              }
-
             }
             else {
               //return help
