@@ -11,7 +11,7 @@ using TShockAPI.DB;
 using System.ComponentModel;
 
 namespace MessagePlugin {
-  [ApiVersion(1, 18)]
+  [ApiVersion(1, 19)]
   public class MessagePlugin : TerrariaPlugin {
     public static List<Message> Messages = new List<Message>();
 
