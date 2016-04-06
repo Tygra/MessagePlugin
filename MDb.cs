@@ -60,7 +60,7 @@ namespace MessagePlugin {
           new SqlColumn("Seen", MySqlDbType.Int32)
           );
 
-      SQLWriter.EnsureExists(table);
+      SQLWriter.EnsureTableStructure(table);
     }
     public static List<Message> GetMessages(string name) {
       try {

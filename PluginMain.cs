@@ -68,11 +68,11 @@ namespace MessagePlugin {
 
       TShock.Groups.AddPermissions("trustedadmin", permlist);
 
-      Commands.ChatCommands.Add(new Command("msg.use", Msg, "msg"));
+      Commands.ChatCommands.Add(new Command("tshock.world.modify", Msg, "msg"));
     }
 
     public void OnGreetPlayer(GreetPlayerEventArgs e) {
-      if (TShock.Players[e.Who].Group.HasPermission("msg.use")) {
+      if (TShock.Players[e.Who].Group.HasPermission("tshock.world.modify")) {
         string name = TShock.Players[e.Who].Name;
         int count = GetUnreadEmailsByName(name);
         TShock.Players[e.Who].SendInfoMessage("You have " + count + " unread messages.");
@@ -80,7 +80,7 @@ namespace MessagePlugin {
     }
 
     public void OnPostLogin(PlayerPostLoginEventArgs e) {
-      if (TShock.Players[e.Player.Index].Group.HasPermission("msg.use")) {
+      if (TShock.Players[e.Player.Index].Group.HasPermission("tshock.world.modify")) {
         string name = TShock.Players[e.Player.Index].Name;
         int count = GetUnreadEmailsByName(name);
         TShock.Players[e.Player.Index].SendMessage("You have " + count + " unread messages.", Color.Fuchsia);
@@ -102,7 +102,7 @@ namespace MessagePlugin {
       MDb.AddMessage(from, to, text);
       List<TSPlayer> players = TShock.Utils.FindPlayer(to);
       if (players.Count == 1) {
-        if (players[0].Group.HasPermission("msg.use"))
+        if (players[0].Group.HasPermission("tshock.world.modify"))
           players[0].SendInfoMessage("You have a new message from " + from);
       }
     }
